@@ -2,7 +2,6 @@ import random
 import sys
 
 """TODO:
-        Add unflag ability
         Add user playability
         Add probablility map
 """
@@ -151,7 +150,16 @@ class field:
                 print(self)
             else:
                 print("Out of flags")
-        
+
+     
+        #remove flag from space given
+        def unflag(self, y, x):
+            if self.working[y][x] == -1:
+                self.working[y][x] = -2
+                print(self)
+            else:
+                print("no flag at position")
+
 
         #sets up the array for printing
         def __repr__(self):
