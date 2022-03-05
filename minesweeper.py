@@ -2,24 +2,31 @@ import random
 import sys
 
 """TODO:
-        Add user playability
         Add probablility map
+        Add pygame ui
+        Add computer vision functionality
 """
 #class for game to take place
 class field:
     #constructor
-    def __init__(self, size=10, bombs=10):
+    def __init__(self, size=10, bombs=10, mode = "auto"):
         #sets attributes
         self.size = size
         self.bombs = bombs
-        self.working = []
+        self.working = [] #what is know of the field
         for i in range(size):
             temp = []
             for j in range(size):
                 temp.append(-2)
             self.working.append(temp)
-        self.answer = self.working
+        self.answer = self.working #the entirety of the field
         self.counter = 0 #checks for a stalemate where the rules don't work
+        self.map = [] #map of the probability of each square being a bomb
+        for i in range(size):
+            holder = []
+            for j in range(size):
+                holder.append(100)
+            self.map.append(holder)
 
         #places bombs on board
         bomb_locations = []
@@ -34,8 +41,17 @@ class field:
         #places numbers on non bomb spaces
         for row in range(len(self.answer)):
             for column in range(len(self.answer)):
-                surrounding = find_around(row, column, self.answer)
-                self.answer[row][column] = surrounding.count(-1)
+                if self.answer[row][column] != -1:
+                    surrounding = find_around(row, column, self.answer)
+                    self.answer[row][column] = surrounding.count(-1)
+        
+        #make action based off of mode
+        if mode == "auto":
+            auto()
+        elif mode == "manual":
+            manual()
+        elif mode == "cv":
+            pass
 
         
         #finds values of adjacent squares
@@ -87,12 +103,6 @@ class field:
             around_chords = find_around_chords(y,x, self.working)
             around = find_around(y,x,self.working)
 
-            #if the square has no bombs around it, dig surrounding squares
-            if self.working[y][x] == 0:
-                for space in around_chords:
-                    dig(space[0],space[1])
-                self.counter = 0
-
             #if all the mines around it are flagged, dig remaining surrounding squares
             if self.working[y][x] == around.count(-1):
                 for space in around_chords:
@@ -111,45 +121,70 @@ class field:
         #dig at the space provided
         def dig(self,y,x):
             if self.working[y][x] == -2:
-                self.working[y][x] = self.answer[y,x]
+                self.working[y][x] = self.answer[y][x]
+                if self.working[y][x] == 0:
+                    for space in find_around_chords(y,x):
+                        dig(space[0],space[1])
                 print(self)
                 if self.working[y][x] == -1:
                     end()
         
 
         #what the computer does to auto solve the game
-        def ai(self):
-            for row in self.working:
-                for column in self.working:
-                    work_space(row, column)
-                    self.counter += 1
-            full = []
-            for lst in self.working:
-                for item in row:
-                    full.append[item]
-            if full.count(-1) == self.bombs:
-                for i in range(self.size):
-                    for j in range(self.size):
-                        if self.working[i][j] == -2:
-                            dig(i,j)
-            if self.counter >= len(self.working ** 2): #digs a random square if the rules don't work on any square
-                undug = find_undug()
-                selection = random.choice(undug)
-                dig(selection)
-            check_win()
-
+        def auto(self):
+            while True:
+                for row in self.working:
+                    for column in self.working:
+                        work_space(row, column)
+                        self.counter += 1
+                full = []
+                for lst in self.working:
+                    for item in row:
+                        full.append[item]
+                if full.count(-1) == self.bombs:
+                    for i in range(self.size):
+                        for j in range(self.size):
+                            if self.working[i][j] == -2:
+                                dig(i,j)
+                if self.counter >= len(self.working ** 2): #digs a random square if the rules don't work on any square
+                    undug = find_undug()
+                    selection = random.choice(undug)
+                    dig(selection)
+                check_win()
+        
+        #allows the user to play themselves
+        def manual(self):
+            print(self)
+            move_type = ""
+            while True:
+                move_type = ""
+                while move_type != "1" and move_type != "2" and move_type != "dig" and move_type != "flag":
+                    move_type = input("What would you like to do?\n1. dig\n2. flag\n")
+                move_x = ""
+                while move_x not in str(range(self.size + 1)):
+                    move_x = input("What is the x position of the space? (pick a number between 1 and %s)\n"%(str(self.size)))
+                move_y = ""
+                while move_y not in str(range(self.size + 1)):
+                    move_y = input("What is the y position of the space? (pick a number between 1 and %s)\n"%(str(self.size)))
+                if move_type == "1" or move_type == "dig":
+                    dig(int(move_y)-1, int(move_x)-1)
+                if move_type == "2" or move_type == "flag":
+                    flag(int(move_y)-1, int(move_x)-1)
 
         #flag at the space given
         def flag(self,y,x):
-            all = []
-            for lst in self.working:
-                for value in lst:
-                    all.append(value)
-            if all.count(-1) == self.bombs:
-                self.working[y][x] = -1
-                print(self)
+            if self.working[y][x] == -1:
+                unflag(y,x)
             else:
-                print("Out of flags")
+                all = []
+                for lst in self.working:
+                    for value in lst:
+                        all.append(value)
+                if all.count(-1) != self.bombs:
+                    self.working[y][x] = -1
+                    print(self)
+                else:
+                    print("Out of flags")
 
      
         #remove flag from space given
