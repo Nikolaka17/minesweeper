@@ -2,9 +2,9 @@ import random
 import sys
 
 """TODO:
-        Add probablility map
         Add pygame ui
         Add computer vision functionality
+        Implement more solving algorithms
 """
 #class for game to take place
 class field:
@@ -25,7 +25,7 @@ class field:
         for i in range(size):
             holder = []
             for j in range(size):
-                holder.append(100)
+                holder.append(1)
             self.map.append(holder)
 
         #places bombs on board
@@ -53,7 +53,22 @@ class field:
         elif mode == "cv":
             pass
 
+
+        #update probability of each square
+        def update_prob_map(self):
+            for y in range(self.size):
+                for x in range(self.size):
+                    if self.working[y][x] != -1 and self.working[y][x] != -2 and self.working[y][x] != 0:
+                        around = find_around(y,x,self.working)
+                        around_chord = [y,x,self.working]
+                        val = (self.working[y][x]-around.count(-1))/(around.count(-2))
+                        for i in range(len(around)):
+                            if around[i] == -2:
+                                self.map[around_chord[i][0]][around_chord[i][1]] *= val
+                    else:
+                        self.map[y][x] = 1
         
+
         #finds values of adjacent squares
         def find_around(self,y, x, board):
             result = []
@@ -146,12 +161,18 @@ class field:
                         for j in range(self.size):
                             if self.working[i][j] == -2:
                                 dig(i,j)
-                if self.counter >= len(self.working ** 2): #digs a random square if the rules don't work on any square
-                    undug = find_undug()
-                    selection = random.choice(undug)
-                    dig(selection)
+                if self.counter >= len(self.working ** 2): #sees if rules don't work for any square
+                    update_prob_map()
+                    lowest_chord = [0,0]
+                    for y in range(self.size):
+                        for x in range(self.size):
+                            if self.working[y][x] == -2:
+                                if self.map[y][x] < self.map[lowest_chord[0],lowest_chord[1]]:
+                                    lowest_chord = [y,x]
+                    dig(lowest_chord[0],lowest_chord[1])
                 check_win()
         
+
         #allows the user to play themselves
         def manual(self):
             print(self)
@@ -159,17 +180,18 @@ class field:
             while True:
                 move_type = ""
                 while move_type != "1" and move_type != "2" and move_type != "dig" and move_type != "flag":
-                    move_type = input("What would you like to do?\n1. dig\n2. flag\n")
+                    move_type = str(input("What would you like to do?\n1. dig\n2. flag\n"))
                 move_x = ""
                 while move_x not in str(range(self.size + 1)):
-                    move_x = input("What is the x position of the space? (pick a number between 1 and %s)\n"%(str(self.size)))
+                    move_x = str(input("What is the x position of the space? (pick a number between 1 and %s)\n"%(str(self.size))))
                 move_y = ""
                 while move_y not in str(range(self.size + 1)):
-                    move_y = input("What is the y position of the space? (pick a number between 1 and %s)\n"%(str(self.size)))
+                    move_y = str(input("What is the y position of the space? (pick a number between 1 and %s)\n"%(str(self.size))))
                 if move_type == "1" or move_type == "dig":
                     dig(int(move_y)-1, int(move_x)-1)
                 if move_type == "2" or move_type == "flag":
                     flag(int(move_y)-1, int(move_x)-1)
+
 
         #flag at the space given
         def flag(self,y,x):
